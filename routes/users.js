@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
-const { mongoDb, dbUrl, MongoClient } = require("../dbConfig");
+const { ObjectId } = require("mongodb");
+const { mongoDB, dbUrl, MongoClient } = require("../dbConfig");
 
 /* GET users listing. */
 router.get('/',async function(req, res, next) {
@@ -42,16 +43,26 @@ router.post("/register", async(req, res) => {
   }
 })
 
-router.put("/edituser", async (req, res) => {
+router.put("/edituser/:id", async (req, res) => {
   const find = req.body.find;
-  const replace=req.body.replace
+  const replace = req.body.replace
+  const body = req.body;
+  let id = req.params.id;
   const client = await MongoClient.connect(dbUrl);
   try {
     let db = await client.db("nodemongoconnect");
-    let document = await db.collection("users").updateOne(find, { $set: replace });
-    res.send({
-      message: "User Information updated successfully"
-    });
+    // let document = await db.collection("users").updateOne(find, { $set: replace });
+    let document = await db.collection("users").findOneAndReplace({ _id:mongoDB.ObjectId(id)}, body);
+    if (document.value) {
+      res.send({
+        message: "User Information updated successfully"
+      });
+    }
+    else {
+      res.status(404).send({
+        message:"Invalid ID"
+      })
+    }
   }
   catch (err) {
     console.log(err);
@@ -64,15 +75,23 @@ router.put("/edituser", async (req, res) => {
   }
 })
 
-router.delete("/deleteUser", async (req, res) => {
+router.delete("/deleteUser/:id", async (req, res) => {
   const find = req.body;
   const client = await MongoClient.connect(dbUrl);
   try {
     let db = client.db("nodemongoconnect");
-    await db.collection("users").deleteOne(find);
-    res.send({
-      message: "User Deleted Successfully"
-    })
+    // await db.collection("users").deleteOne(find);
+    let document=await db.collection("users").findOneAndDelete({ _id: mongoDB.ObjectId(req.params.id) });
+    if (document.value) {
+      res.send({
+        message: "User Deleted Successfully"
+      }); 
+    }
+    else {
+      res.send({
+        message:"Invalid ID"
+      })
+    }
   }
   catch (err) {
     console.log(err);
